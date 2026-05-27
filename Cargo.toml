@@ -1,0 +1,30 @@
+[package]
+name = "whack-a-creature"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["staticlib"]
+name = "whackac"
+
+[dependencies]
+dos_x = { version = "0.1.0", git = "https://github.com/Enet4/dos-rs", branch = "main" }
+minipng = "1.0.0"
+tinyrand = "0.5"
+
+[dependencies.opbinary]
+git = "https://github.com/Enet4/opbinary-rs"
+rev = "065111bd"
+default-features = false
+
+[profile.dev]
+codegen-units = 1
+opt-level = 1
+panic = "abort"
+lto = "fat"
+
+[profile.release]
+codegen-units = 1
+strip = "debuginfo"
+panic = "abort"
+lto = "fat"

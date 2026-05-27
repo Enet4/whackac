@@ -1,0 +1,7 @@
+[build]
+target = "./i486-unknown-none-gnu.json"
+
+rustflags = ["-Zunstable-options"]
+
+[unstable]
+build-std = ["core", "alloc"]
