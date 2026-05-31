@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Cache elf2djgpp
         id: cache-elf2djgpp
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/elf2djgpp
           key: ${{ runner.os }}-elf2djgpp

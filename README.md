@@ -1,6 +1,6 @@
 # Whack-a-Creature
 
-[![ci](https://github.com/Enet4/whackac/actions/workflows/ci.yml/badge.svg)](https://github.com/Enet4/whackac/actions/workflows/ci.yml)
+[![deploy](https://github.com/Enet4/whackac/actions/workflows/deploy.yml/badge.svg)](https://github.com/Enet4/whackac/actions/workflows/deploy.yml)
 
 Created for the [VGA & Adlib Game Jam](https://itch.io/jam/dos-vgaadlib-jam-2026-take-2).
 Also available on [itch.io](https://e-net4.itch.io/whackac).
