@@ -220,7 +220,7 @@ pub struct RoundOptions {
 
 impl RoundOptions {
     /// The total length of a round in ticks
-    const ROUND_LENGTH: u16 = 150 * 7;
+    const ROUND_LENGTH: u16 = 150 * 8;
 
     /// Create a new game round on Easy difficulty
     pub fn new_game_easy(rng: &mut impl RandRange<u16>) -> Self {
@@ -244,7 +244,7 @@ impl RoundOptions {
             distraction2: None,
             distraction3: None,
             avg_idle_time: 100,
-            num_creatures: 40,
+            num_creatures: 45,
             num_creatures_distraction: 0,
         }
     }
@@ -277,9 +277,9 @@ impl RoundOptions {
             distraction1: Some(distraction),
             distraction2: None,
             distraction3: None,
-            avg_idle_time: 75,
-            num_creatures: 75,
-            num_creatures_distraction: 5,
+            avg_idle_time: 76,
+            num_creatures: 80,
+            num_creatures_distraction: 3,
         }
     }
 
@@ -318,9 +318,9 @@ impl RoundOptions {
             distraction1: Some(distraction1),
             distraction2: Some(distraction2),
             distraction3: Some(distraction3),
-            avg_idle_time: 52,
-            num_creatures: 128,
-            num_creatures_distraction: 16,
+            avg_idle_time: 56,
+            num_creatures: 120,
+            num_creatures_distraction: 10,
         }
     }
 

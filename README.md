@@ -7,8 +7,10 @@ Also available on [itch.io](https://e-net4.itch.io/whackac).
 
 ## Playing
 
-Use the arrow keys on your keyboard to select an option and aim.
+Use the arrow keys on your keyboard to select an option, and to aim your hand over the holes.
 Press Z to whack, X to grab.
+
+Whack as many creatures to whack as you can, and grab as many creatures to grab as you can. Make no mistakes though, they will cost you points!
 
 ## Building
 

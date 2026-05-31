@@ -152,14 +152,18 @@ pub fn game_round(
         score_text = "Score: ?".to_string();
     });
 
-    assets.small_font.draw_text(6, 4, &score_text, COLOR_BLACK);
+    assets
+        .small_font
+        .draw_text(12, 10, &score_text, COLOR_BLACK);
 
     let mut update_score = |score: &mut u16, delta: i16| {
         *score = (*score as i32 + delta as i32).max(0) as u16;
         score_text.truncate("Score: ".len());
         let _ = write!(score_text, "{}", *score);
-        assets.background.draw_rect(2, 2, 70, 9);
-        assets.small_font.draw_text(6, 4, &score_text, COLOR_BLACK);
+        assets.background.draw_rect(10, 9, 68, 8);
+        assets
+            .small_font
+            .draw_text(12, 10, &score_text, COLOR_BLACK);
     };
 
     // the player cursor
@@ -168,8 +172,6 @@ pub fn game_round(
     let mut whacking: Option<i8> = None;
     // state of grabbing (with frame)
     let mut grabbing: Option<i8> = None;
-
-    let avg_idle_range = round.options.avg_idle_time - 12..round.options.avg_idle_time + 50;
 
     loop {
         unsafe {
@@ -208,8 +210,9 @@ pub fn game_round(
 
                         // make it hide after a while
                         if subticks == 0 {
-                            let n = rng.next_range(avg_idle_range.clone());
-                            if *frame > n {
+                            let range = frame.saturating_sub(32)..frame.saturating_add(32);
+                            let n = rng.next_range(range);
+                            if n > round.options.avg_idle_time {
                                 *hole = HoleStatus::Hiding {
                                     creature: *creature,
                                     frame: 0,
@@ -258,12 +261,16 @@ pub fn game_round(
             // draw glove
             match pos_1_y {
                 -1 => {
-                    let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32 + 1;
-                    const Y: i32 = 84 + 0 * Table::HOLE_STRIDE_Y as i32 - 4;
+                    let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32;
+                    const Y: i32 = 84 + 0 * Table::HOLE_STRIDE_Y as i32 - 6;
                     let (x, y, frame) = match (whacking, grabbing) {
                         (None, None) => (x, Y, GloveFrame::Idle),
-                        (Some(step), None) => (x - 2, Y - 10 + step as i32 * 2, GloveFrame::Whack),
-                        (None, Some(step)) => (x - 2, Y - 6 - step as i32 * 2, GloveFrame::Grab),
+                        (Some(step), None) => {
+                            (x - 2, Y - 10 + step.min(6) as i32 * 2, GloveFrame::Whack)
+                        }
+                        (None, Some(step)) => {
+                            (x - 2, Y - 6 - step.min(6) as i32 * 2, GloveFrame::Grab)
+                        }
                         (Some(_), Some(_)) => {
                             unreachable!("Whacking _and_ grabbing!? In _this_ economy??")
                         }
@@ -271,12 +278,16 @@ pub fn game_round(
                     draw_glove(&glove, x, y, frame);
                 }
                 0 => {
-                    let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32 + 1;
-                    const Y: i32 = 84 + Table::HOLE_STRIDE_Y as i32 - 4;
+                    let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32;
+                    const Y: i32 = 84 + Table::HOLE_STRIDE_Y as i32 - 6;
                     let (x, y, frame) = match (whacking, grabbing) {
                         (None, None) => (x, Y, GloveFrame::Idle),
-                        (Some(step), None) => (x - 2, Y - 10 + step as i32 * 2, GloveFrame::Whack),
-                        (None, Some(step)) => (x - 2, Y - 6 - step as i32 * 2, GloveFrame::Grab),
+                        (Some(step), None) => {
+                            (x - 2, Y - 10 + step.min(7) as i32 * 2, GloveFrame::Whack)
+                        }
+                        (None, Some(step)) => {
+                            (x - 2, Y - 6 - step.min(7) as i32 * 2, GloveFrame::Grab)
+                        }
                         (Some(_), Some(_)) => {
                             unreachable!("Whacking _and_ grabbing!? In _this_ economy??")
                         }
@@ -284,12 +295,16 @@ pub fn game_round(
                     draw_glove(&glove, x, y, frame);
                 }
                 1 => {
-                    let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32 + 1;
-                    const Y: i32 = 84 + 2 * Table::HOLE_STRIDE_Y as i32 - 4;
+                    let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32;
+                    const Y: i32 = 84 + 2 * Table::HOLE_STRIDE_Y as i32 - 6;
                     let (x, y, frame) = match (whacking, grabbing) {
                         (None, None) => (x, Y, GloveFrame::Idle),
-                        (Some(step), None) => (x - 2, Y - 10 + step as i32 * 2, GloveFrame::Whack),
-                        (None, Some(step)) => (x - 2, Y - 6 - step as i32 * 2, GloveFrame::Grab),
+                        (Some(step), None) => {
+                            (x - 2, Y - 10 + step.min(7) as i32 * 2, GloveFrame::Whack)
+                        }
+                        (None, Some(step)) => {
+                            (x - 2, Y - 6 - step.min(7) as i32 * 2, GloveFrame::Grab)
+                        }
                         (Some(_), Some(_)) => {
                             unreachable!("Whacking _and_ grabbing!? In _this_ economy??")
                         }
@@ -319,7 +334,7 @@ pub fn game_round(
 
             if let Some(f) = &mut whacking {
                 *f += 1;
-                if *f == 4 {
+                if *f == 5 {
                     // process the hit
                     let hole = table.hole_at_mut(pos_1_x, pos_1_y);
                     match hole {
@@ -353,12 +368,12 @@ pub fn game_round(
                     }
                 }
                 // reset after a few more frames for recoil
-                if *f >= 8 {
+                if *f >= 10 {
                     whacking = None;
                 }
             } else if let Some(f) = &mut grabbing {
                 *f += 1;
-                if *f > 4 {
+                if *f == 6 {
                     // process the grab
                     let hole = table.hole_at_mut(pos_1_x, pos_1_y);
                     match hole {
@@ -392,7 +407,7 @@ pub fn game_round(
                     }
                 }
                 // reset after a few more frames for recoil
-                if *f >= 8 {
+                if *f >= 12 {
                     grabbing = None;
                 }
             }
@@ -428,8 +443,11 @@ pub fn game_round(
         } else if ticks == RoundState::ROUND_LENGTH + 80 {
             assets.background.draw_all();
             // show the stats a small bit after the round ends
-            draw_stats(&assets, &stats, &round.options);
+            draw_stats(&assets, &stats, &round.options, ticks);
             phase = GamePhase::Stats;
+        } else if ticks > RoundState::ROUND_LENGTH + 80 {
+            // keep drawing the stats
+            draw_stats(&assets, &stats, &round.options, ticks);
         }
 
         // process music
@@ -473,7 +491,7 @@ pub fn game_round(
     }
 }
 
-fn draw_stats(assets: &Assets, stats: &Stats, round_options: &RoundOptions) {
+fn draw_stats(assets: &Assets, stats: &Stats, round_options: &RoundOptions, ticks: u16) {
     const MARGIN_X: i32 = 60;
     const MARGIN_Y: i32 = 44;
     const CORNER_1_X: i32 = MARGIN_X;
@@ -523,4 +541,35 @@ fn draw_stats(assets: &Assets, stats: &Stats, round_options: &RoundOptions) {
         &format!("Total score: {}", stats.score),
         COLOR_BLACK,
     );
+
+    let weak_score = round_options.num_creatures / 2;
+    let good_score = round_options.num_creatures * 16 / 11;
+
+    let msg = if stats.score == 0 && mistakes > 0 {
+        Some("Did you understand your assignment?")
+    } else if stats.score < weak_score {
+        match round_options.difficulty {
+            Difficulty::Easy => Some("Oof! What was that about?"),
+            Difficulty::Normal => Some("They really got you, huh..."),
+            Difficulty::Hard => Some("Tough luck!"),
+        }
+    } else if stats.score >= good_score {
+        match round_options.difficulty {
+            Difficulty::Easy => Some("OK then! Increase the difficulty!"),
+            Difficulty::Normal => Some("Good job! :)"),
+            Difficulty::Hard => Some("You're a legend!"),
+        }
+    } else {
+        None
+    };
+
+    if let Some(msg) = msg {
+        let center_x = 160 - msg.len() as i32 * 3;
+        let c = if (ticks & 4) == 0 {
+            COLOR_HIGHLIGHT
+        } else {
+            COLOR_BLACK
+        };
+        assets.small_font.draw_text(center_x, 180, &msg, c);
+    }
 }

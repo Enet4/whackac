@@ -737,9 +737,9 @@ pub fn init_palette(palette: &mut Palette) {
     palette.0[26] = 0x00;
 
     // beige
-    palette.0[27] = 0x31;
-    palette.0[28] = 0x2f;
-    palette.0[39] = 0x29;
+    palette.0[27] = 0x2b;
+    palette.0[28] = 0x2a;
+    palette.0[39] = 0x26;
 
     // range 40..47 currently unused
 

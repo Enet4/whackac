@@ -94,22 +94,24 @@ const INTERRUPT_KEYBOARD: core::ffi::c_int = 0x09;
 
 #[inline]
 fn take_default_keyboard_interrupt() {
-    return;
     // fetch the address of the old keyboard ISR into old_isr
     unsafe {
         djgpp::dpmi::_go32_dpmi_get_protected_mode_interrupt_vector(
             INTERRUPT_KEYBOARD,
             &raw mut OLD_KEYBOARD_ISR,
         );
-
+    }
+    return;
+    unsafe {
         let h: *mut c_void = custom_keyboard_interrupt_callback as *mut _;
 
-        _go32_dpmi_lock_code(h, 2048);
+        _go32_dpmi_lock_code(h, 256);
 
         NEW_KEYBOARD_ISR.pm_offset = h.addr() as u32;
         NEW_KEYBOARD_ISR.pm_selector = _go32_my_cs();
 
-        djgpp::dpmi::_go32_dpmi_allocate_iret_wrapper(&raw mut NEW_KEYBOARD_ISR);
+        //let c = djgpp::dpmi::_go32_dpmi_allocate_iret_wrapper(&raw mut NEW_KEYBOARD_ISR);
+        //assert_eq!(c, 0);
 
         djgpp::dpmi::_go32_dpmi_set_protected_mode_interrupt_vector(
             INTERRUPT_KEYBOARD,
@@ -120,7 +122,6 @@ fn take_default_keyboard_interrupt() {
 
 #[inline]
 fn restore_keyboard_interrupt() {
-    return;
     unsafe {
         djgpp::dpmi::_go32_dpmi_set_protected_mode_interrupt_vector(
             INTERRUPT_KEYBOARD,
@@ -130,13 +131,13 @@ fn restore_keyboard_interrupt() {
 }
 
 #[unsafe(no_mangle)]
+#[inline(never)]
 unsafe extern "C" fn custom_keyboard_interrupt_callback() {
     unsafe {
+        input::update_keys();
         //let mut info = core::mem::zeroed();
     };
 }
-#[unsafe(no_mangle)]
-unsafe extern "C" fn _end_custom_keyboard_interrupt_callback() {}
 
 fn run(mut rng: impl RandRange<u16>) {
     println!("Whack-a-Creature by E_net4 (2026)");
