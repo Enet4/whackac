@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whack-a-Creature for MS-DOS</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <script type="module" crossorigin src="js-dos/js-dos.js"></script>
+  <link rel="stylesheet" crossorigin href="js-dos/js-dos.css">
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    if (window.android !== undefined && window.android.startHardwareService !== undefined) {
+      window.backendHardware = (emulator) => {
+        return new Promise((resolve) => {
+          window.backendResolve = resolve;
+          window.android.startHardwareService(emulator);
+        });
+      };
+    }
+    const params = new URLSearchParams(location.search);
+    document.addEventListener("DOMContentLoaded", () => {
+      /* eslint-disable max-len */
+      /* eslint-enable max-len */
+      const props = Dos(document.getElementById("app"),
+        {
+          url: "dos_createac.jsdos",
+          autoStart: true,
+          pathPrefix: "js-dos/emulators/",
+          noNetworking: true,
+          noCloud: true,
+          noCursor: true,
+          softKeyboardLayout: [
+            [
+              ["{escape}"],
+              ["{up}", "{left} {down} {right}"],
+              ["{enter}"],
+            ],
+          ],
+          onEvent: (event, arg) => {
+            console.log("Event", event, arg);
+            if (event === "ci-ready") {
+              console.log("js-dos version:", props.getVersion());
+              window.ci = arg;
+            }
+          },
+          // renderAspect: "1/1",
+          // renderBackend: "webgl",
+          // imageRendering: "smooth",
+          // thinSidebar: true,
+        });
+
+      window.props = props;
+    });
+  </script>
+</body>
+
+</html>
