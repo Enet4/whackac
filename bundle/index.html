@@ -19,6 +19,7 @@
 <body>
   <div id="app"></div>
   <script>
+    const APP_NAME = "dos_whackac";
     if (window.android !== undefined && window.android.startHardwareService !== undefined) {
       window.backendHardware = (emulator) => {
         return new Promise((resolve) => {
@@ -33,7 +34,7 @@
       /* eslint-enable max-len */
       const props = Dos(document.getElementById("app"),
         {
-          url: "dos_createac.jsdos",
+          url: APP_NAME + ".jsdos",
           autoStart: true,
           pathPrefix: "js-dos/emulators/",
           noNetworking: true,
@@ -43,7 +44,7 @@
             [
               ["{escape}"],
               ["{up}", "{left} {down} {right}"],
-              ["{enter}"],
+              ["{enter}", "{z}", "{x}"],
             ],
           ],
           onEvent: (event, arg) => {

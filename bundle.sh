@@ -18,7 +18,7 @@ zip -q dos_$APPNAME.zip \
     .jsdos/dosbox.conf
 rm -f $APPNAME.exe
 
-# rename it as dos_createac.jsdos
+# rename it as dos_whackac.jsdos
 cp dos_$APPNAME.zip ../dist/dos_$APPNAME.jsdos
 rm dos_$APPNAME.zip
 echo "Created bundle dist/dos_$APPNAME.jsdos"
