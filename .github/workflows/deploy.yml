@@ -1,0 +1,85 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  ARCH: i486
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache elf2djgpp
+        id: cache-elf2djgpp
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/elf2djgpp
+          key: ${{ runner.os }}-elf2djgpp
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: true
+          rustflags: "-W warnings"
+      - name: Install pc-msdosdjgpp-gcc
+        env:
+          MSDOSDJGPP_URL: https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+        run: |
+          mkdir -p /tmp/downloads
+          # download .tar.bz2, extract, and copy to /usr/local/
+          curl -L $MSDOSDJGPP_URL | tar -xj -C /tmp/downloads/
+          sudo cp -r /tmp/downloads/djgpp/* /usr/local/
+          # add to PATH
+          echo "export PATH=/usr/local/i586-pc-msdosdjgpp/bin:$PATH" >> $GITHUB_ENV
+          # clean up
+          rm -rf /tmp/downloads
+          # test
+          "i586-pc-msdosdjgpp-gcc" --version
+      - name: Install elf2djgpp
+        if: steps.cache-elf2djgpp.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/elf2djgpp
+          cd /tmp/elf2djgpp
+          git clone --depth 1 https://github.com/Enet4/elf2djgpp.git
+          cd elf2djgpp
+          rustup default stable
+          cargo install --path .
+          # clean up
+          rm -rf elf2djgpp
+          # test
+          elf2djgpp --version
+      - name: Build (release)
+        env:
+          CC: i586-pc-msdosdjgpp-gcc
+          ARCH: ${{ env.ARCH }}
+        run: ./build.sh release
+      - name: Create bundle
+        run: |
+          ./bundle.sh
+          cp -r bundle/index.html bundle/js-dos dist/
+          touch dist/.nojekyll
+          rm -rf dist/release
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Everything is in the dist folder
+          path: "dist"
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
