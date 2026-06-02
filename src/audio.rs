@@ -81,7 +81,8 @@ unsafe fn pc_speaker_on() {
 #[inline(always)]
 unsafe fn pc_speaker_off() {
     unsafe {
-        outportb(0x61, 0);
+        let inb = inportb(0x61);
+        outportb(0x61, inb & 0xfc);
     }
 }
 

@@ -16,13 +16,10 @@ mod menu;
 use alloc::format;
 use audio::sound_off;
 use dos_x::adlib::detect_adlib;
-use dos_x::djgpp;
 use dos_x::djgpp::dos::delay;
-use dos_x::djgpp::dpmi::{__dpmi_int, __dpmi_regs, _go32_dpmi_lock_code};
-use dos_x::djgpp::go32::_go32_my_cs;
+use dos_x::djgpp::dpmi::{__dpmi_int, __dpmi_regs};
 use dos_x::vga::Palette;
 
-use core::ffi::c_void;
 use core::panic::PanicInfo;
 use dos_x::vga::vsync;
 use dos_x::{djgpp::stdlib::exit, println};
@@ -40,6 +37,7 @@ use crate::gfx::{
 };
 use crate::howto::how_to_play;
 use crate::ingame::game_round;
+use crate::input::{restore_keyboard_interrupt, take_default_keyboard_interrupt};
 use crate::menu::MenuOutcome;
 
 /// 16x16 floppy disk icon, raw 8-bit indexed data
@@ -86,57 +84,6 @@ fn dos_main() {
 
     let rng = tinyrand::Xorshift::seed(seed);
     run(rng);
-}
-
-static mut OLD_KEYBOARD_ISR: djgpp::dpmi::_go32_dpmi_seginfo = unsafe { core::mem::zeroed() };
-static mut NEW_KEYBOARD_ISR: djgpp::dpmi::_go32_dpmi_seginfo = unsafe { core::mem::zeroed() };
-const INTERRUPT_KEYBOARD: core::ffi::c_int = 0x09;
-
-#[inline]
-fn take_default_keyboard_interrupt() {
-    // fetch the address of the old keyboard ISR into old_isr
-    unsafe {
-        djgpp::dpmi::_go32_dpmi_get_protected_mode_interrupt_vector(
-            INTERRUPT_KEYBOARD,
-            &raw mut OLD_KEYBOARD_ISR,
-        );
-    }
-    return;
-    unsafe {
-        let h: *mut c_void = custom_keyboard_interrupt_callback as *mut _;
-
-        _go32_dpmi_lock_code(h, 256);
-
-        NEW_KEYBOARD_ISR.pm_offset = h.addr() as u32;
-        NEW_KEYBOARD_ISR.pm_selector = _go32_my_cs();
-
-        //let c = djgpp::dpmi::_go32_dpmi_allocate_iret_wrapper(&raw mut NEW_KEYBOARD_ISR);
-        //assert_eq!(c, 0);
-
-        djgpp::dpmi::_go32_dpmi_set_protected_mode_interrupt_vector(
-            INTERRUPT_KEYBOARD,
-            &raw mut NEW_KEYBOARD_ISR,
-        );
-    }
-}
-
-#[inline]
-fn restore_keyboard_interrupt() {
-    unsafe {
-        djgpp::dpmi::_go32_dpmi_set_protected_mode_interrupt_vector(
-            INTERRUPT_KEYBOARD,
-            &raw mut OLD_KEYBOARD_ISR,
-        );
-    }
-}
-
-#[unsafe(no_mangle)]
-#[inline(never)]
-unsafe extern "C" fn custom_keyboard_interrupt_callback() {
-    unsafe {
-        input::update_keys();
-        //let mut info = core::mem::zeroed();
-    };
 }
 
 fn run(mut rng: impl RandRange<u16>) {
@@ -276,13 +223,13 @@ fn run(mut rng: impl RandRange<u16>) {
 
     fade_out(&mut assets.palette);
 
-    // reset the default keyboard interrupt handler
-    restore_keyboard_interrupt();
-
     // set back to text mode
     unsafe {
         dos_x::vga::set_video_mode(0x02);
     }
+
+    // reset the default keyboard interrupt handler
+    restore_keyboard_interrupt();
 
     println!("Thank you for playing!");
 }

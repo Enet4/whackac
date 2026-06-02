@@ -6,7 +6,12 @@
 //!
 //! This could also implement key mappings!
 
-use dos_x::key;
+use core::ffi::c_void;
+
+use dos_x::{
+    djgpp::{self, dpmi::_go32_dpmi_lock_code, go32::_go32_my_cs, pc::outportb},
+    key, println,
+};
 
 /// Game key, maps to the key state array
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -80,7 +85,7 @@ pub fn update_keys() {
 
     // update current key state
 
-    for _ in 0..2 {
+    for _ in 0..8 {
         let key = key::get_keypress();
         if key == 0 {
             break;
@@ -114,4 +119,62 @@ pub fn is_down(key: Key) -> bool {
 /// return whether the key has just been released
 pub fn is_released(key: Key) -> bool {
     unsafe { !KEY_STATE[key as usize] && KEY_STATE_PREVIOUS[key as usize] }
+}
+
+// --- interrupt handling logic
+
+static mut OLD_KEYBOARD_ISR: djgpp::dpmi::_go32_dpmi_seginfo = unsafe { core::mem::zeroed() };
+static mut NEW_KEYBOARD_ISR: djgpp::dpmi::_go32_dpmi_seginfo = unsafe { core::mem::zeroed() };
+const INTERRUPT_KEYBOARD: core::ffi::c_int = 0x09;
+
+pub fn take_default_keyboard_interrupt() {
+    // fetch the address of the old keyboard ISR into old_isr
+    unsafe {
+        djgpp::dpmi::_go32_dpmi_get_protected_mode_interrupt_vector(
+            INTERRUPT_KEYBOARD,
+            &raw mut OLD_KEYBOARD_ISR,
+        );
+
+        let h: *mut c_void = custom_keyboard_interrupt_callback as *mut _;
+
+        _go32_dpmi_lock_code(h, 128);
+
+        NEW_KEYBOARD_ISR.pm_offset = h.addr() as u32;
+        NEW_KEYBOARD_ISR.pm_selector = _go32_my_cs();
+
+        let c = djgpp::dpmi::_go32_dpmi_allocate_iret_wrapper(&raw mut NEW_KEYBOARD_ISR);
+        assert_eq!(c, 0);
+
+        let c = djgpp::dpmi::_go32_dpmi_set_protected_mode_interrupt_vector(
+            INTERRUPT_KEYBOARD,
+            &raw mut NEW_KEYBOARD_ISR,
+        );
+        assert_eq!(c, 0);
+    }
+}
+
+pub fn restore_keyboard_interrupt() {
+    unsafe {
+        println!(
+            "Restoring keyboard interrupt handler ({:?})...",
+            *&raw const OLD_KEYBOARD_ISR
+        );
+        let c = djgpp::dpmi::_go32_dpmi_set_protected_mode_interrupt_vector(
+            INTERRUPT_KEYBOARD,
+            &raw mut OLD_KEYBOARD_ISR,
+        );
+        assert_eq!(c, 0);
+        let c = djgpp::dpmi::_go32_dpmi_free_iret_wrapper(&raw mut NEW_KEYBOARD_ISR);
+        assert_eq!(c, 0);
+    }
+    println!("Done.");
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+unsafe extern "C" fn custom_keyboard_interrupt_callback() {
+    // do nothing. We capture the keyboard buffer ourselves
+    unsafe {
+        outportb(0x20, 0x20);
+    }
 }
