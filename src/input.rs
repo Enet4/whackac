@@ -166,10 +166,6 @@ pub fn take_default_keyboard_interrupt() {
 
 pub fn restore_keyboard_interrupt() {
     unsafe {
-        println!(
-            "Restoring keyboard interrupt handler ({:?})...",
-            *&raw const OLD_KEYBOARD_ISR
-        );
         let c = djgpp::dpmi::_go32_dpmi_set_protected_mode_interrupt_vector(
             INTERRUPT_KEYBOARD,
             &raw mut OLD_KEYBOARD_ISR,
@@ -178,7 +174,6 @@ pub fn restore_keyboard_interrupt() {
         let c = djgpp::dpmi::_go32_dpmi_free_iret_wrapper(&raw mut NEW_KEYBOARD_ISR);
         assert_eq!(c, 0);
     }
-    println!("Done.");
 }
 
 #[unsafe(no_mangle)]
