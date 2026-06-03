@@ -9,7 +9,12 @@
 use core::ffi::c_void;
 
 use dos_x::{
-    djgpp::{self, dpmi::_go32_dpmi_lock_code, go32::_go32_my_cs, pc::outportb},
+    djgpp::{
+        self,
+        dpmi::{_go32_dpmi_lock_code, _go32_dpmi_lock_data},
+        go32::_go32_my_cs,
+        pc::outportb,
+    },
     key, println,
 };
 
@@ -71,10 +76,10 @@ static mut KEY_STATE_PREVIOUS: [bool; NUM_KEYS] = [false; NUM_KEYS];
 
 // functions
 
-/// Update the key state buffers for reading in this cycle.
+/// Update the previous keystate at the start of each frame.
 ///
-/// Call this first, then use the other functions below.
-pub fn update_keys() {
+/// Call this at the end of all key handling.
+pub fn flip_keystate() {
     // roll key state
     unsafe {
         for i in 0..NUM_KEYS {
@@ -82,10 +87,13 @@ pub fn update_keys() {
             KEY_STATE_PREVIOUS[i] = k;
         }
     }
+}
 
+/// updates the key state buffers with the latest keypresses
+fn process_keys() {
     // update current key state
 
-    for _ in 0..8 {
+    for _ in 0..12 {
         let key = key::get_keypress();
         if key == 0 {
             break;
@@ -138,6 +146,9 @@ pub fn take_default_keyboard_interrupt() {
         let h: *mut c_void = custom_keyboard_interrupt_callback as *mut _;
 
         _go32_dpmi_lock_code(h, 128);
+        // lock pages where key states reside
+        _go32_dpmi_lock_data(&raw mut KEY_STATE as *mut _, 16);
+        _go32_dpmi_lock_data(&raw mut KEY_STATE_PREVIOUS as *mut _, 16);
 
         NEW_KEYBOARD_ISR.pm_offset = h.addr() as u32;
         NEW_KEYBOARD_ISR.pm_selector = _go32_my_cs();
@@ -173,7 +184,8 @@ pub fn restore_keyboard_interrupt() {
 #[unsafe(no_mangle)]
 #[inline(never)]
 unsafe extern "C" fn custom_keyboard_interrupt_callback() {
-    // do nothing. We capture the keyboard buffer ourselves
+    process_keys();
+
     unsafe {
         outportb(0x20, 0x20);
     }

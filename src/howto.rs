@@ -105,10 +105,9 @@ pub fn how_to_play(assets: &mut Assets, rng: &mut impl RandRange<u16>) {
         }
 
         // handle keys
-        input::update_keys();
-
         if input::is_pressed(Key::Select) || input::is_pressed(Key::Back) {
             return;
         }
+        input::flip_keystate();
     }
 }

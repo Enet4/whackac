@@ -94,7 +94,6 @@ pub fn menu(assets: &mut Assets, rng: &mut impl RandRange<u16>) -> MenuOutcome {
         draw_arrow_left(ARROW_RIGHT, selection_y, COLOR_BLACK);
 
         // check key presses
-        input::update_keys();
 
         // check up and down
         if input::is_pressed(Key::Up1) {
@@ -165,6 +164,7 @@ pub fn menu(assets: &mut Assets, rng: &mut impl RandRange<u16>) -> MenuOutcome {
             play_click_2();
             return MenuOutcome::Exit;
         }
+        input::flip_keystate();
 
         assets.adlib_player.process();
     }
@@ -204,6 +204,8 @@ fn submenu_new_game(
             .draw_text(x as i32, base_y as i32 + i as i32 * 18, opt, COLOR_BLACK);
     }
 
+    input::flip_keystate();
+
     loop {
         unsafe {
             vsync();
@@ -227,8 +229,6 @@ fn submenu_new_game(
         animation.step(&mut *assets, &mut *rng);
 
         // handle keys
-
-        input::update_keys();
 
         // check up and down
         if input::is_pressed(Key::Up1) {
@@ -255,6 +255,7 @@ fn submenu_new_game(
             play_click_2();
             return NewGameOutcome::Back;
         }
+        input::flip_keystate();
 
         assets.adlib_player.process();
     }
@@ -379,8 +380,6 @@ impl AnimationStatus {
 ///
 /// The creatures to whack and grab are presented.
 fn submenu_present(assets: &mut Assets, round: &RoundOptions) {
-    // TODO init
-
     // TODO change background or something
     assets.background.draw_all();
 
@@ -406,6 +405,8 @@ fn submenu_present(assets: &mut Assets, round: &RoundOptions) {
         .creature_assets
         .draw_creature(&creature2, CreatureIndex::Grab, 144, 128);
 
+    input::flip_keystate();
+
     loop {
         unsafe {
             vsync();
@@ -413,10 +414,10 @@ fn submenu_present(assets: &mut Assets, round: &RoundOptions) {
 
         assets.adlib_player.process();
 
-        input::update_keys();
-
         if input::is_pressed(Key::Select) {
             return;
         }
+
+        input::flip_keystate();
     }
 }
