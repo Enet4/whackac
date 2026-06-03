@@ -1,9 +1,6 @@
+use alloc::vec;
 use alloc::vec::Vec;
-use alloc::{format, vec};
-use dos_x::vga::{self, Palette};
-use minipng::BitDepth;
-
-use crate::creature::CreatureParams;
+use dos_x::vga;
 
 // embed bitmap font images into the binary
 static BIGFONT_PNG: &[u8] = include_bytes!("../../resources/nullptr.png");
