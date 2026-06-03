@@ -134,8 +134,8 @@ pub fn game_round(
     // fade into the game
     fade_in(&mut assets.palette, &target_palette);
 
-    // update keypresses so that they are disregarded in the first loop
-    input::update_keys();
+    // roll keypresses so that they are disregarded in the first loop
+    input::flip_keystate();
 
     // update ticks
     let mut ticks = 0;
@@ -210,7 +210,7 @@ pub fn game_round(
 
                         // make it hide after a while
                         if subticks == 0 {
-                            let range = frame.saturating_sub(32)..frame.saturating_add(32);
+                            let range = 0..frame.saturating_add(24);
                             let n = rng.next_range(range);
                             if n > round.options.avg_idle_time {
                                 *hole = HoleStatus::Hiding {
@@ -454,7 +454,6 @@ pub fn game_round(
         assets.adlib_player.process();
 
         // handle input
-        input::update_keys();
 
         if input::is_pressed(Key::Back) {
             // pause/resume
@@ -488,6 +487,7 @@ pub fn game_round(
                 }
             }
         }
+        input::flip_keystate();
     }
 }
 
