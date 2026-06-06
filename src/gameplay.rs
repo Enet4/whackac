@@ -112,7 +112,7 @@ impl RoundState {
 
         // spawn creatures to whack and to grab
         for _ in 0..options.num_creatures {
-            let tick = rng.next_range(0..RoundState::ROUND_LENGTH);
+            let tick = rng.next_range(0..RoundState::ROUND_LENGTH - 60);
             // 1d2
             let n = rng.next_range(0..2);
             let creature = if n > 0 {
@@ -277,7 +277,7 @@ impl RoundOptions {
             distraction1: Some(distraction),
             distraction2: None,
             distraction3: None,
-            avg_idle_time: 76,
+            avg_idle_time: 78,
             num_creatures: 80,
             num_creatures_distraction: 3,
         }
@@ -318,8 +318,8 @@ impl RoundOptions {
             distraction1: Some(distraction1),
             distraction2: Some(distraction2),
             distraction3: Some(distraction3),
-            avg_idle_time: 56,
-            num_creatures: 120,
+            avg_idle_time: 64,
+            num_creatures: 110,
             num_creatures_distraction: 10,
         }
     }
