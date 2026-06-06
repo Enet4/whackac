@@ -275,15 +275,13 @@ pub fn game_round(
             match pos_1_y {
                 -1 => {
                     let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32;
-                    const Y: i32 = 84 + 0 * Table::HOLE_STRIDE_Y as i32 - 6;
+                    const Y: i32 = 84 + 0 * Table::HOLE_STRIDE_Y as i32 - 7;
                     let (x, y, frame) = match (whacking, grabbing) {
-                        (None, None) => (x, Y, GloveFrame::Idle),
+                        (None, None) => (x, Y - 4, GloveFrame::Idle),
                         (Some(step), None) => {
-                            (x - 2, Y - 10 + step.min(6) as i32 * 2, GloveFrame::Whack)
+                            (x - 3, Y - 14 + step.min(9) as i32 * 2, GloveFrame::Whack)
                         }
-                        (None, Some(step)) => {
-                            (x - 2, Y - 6 - step.min(6) as i32 * 2, GloveFrame::Grab)
-                        }
+                        (None, Some(step)) => (x - 3, Y - step.min(8) as i32 * 2, GloveFrame::Grab),
                         (Some(_), Some(_)) => {
                             unreachable!("Whacking _and_ grabbing!? In _this_ economy??")
                         }
@@ -292,15 +290,13 @@ pub fn game_round(
                 }
                 0 => {
                     let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32;
-                    const Y: i32 = 84 + Table::HOLE_STRIDE_Y as i32 - 6;
+                    const Y: i32 = 84 + 1 * Table::HOLE_STRIDE_Y as i32 - 7;
                     let (x, y, frame) = match (whacking, grabbing) {
-                        (None, None) => (x, Y, GloveFrame::Idle),
+                        (None, None) => (x, Y - 4, GloveFrame::Idle),
                         (Some(step), None) => {
-                            (x - 2, Y - 10 + step.min(7) as i32 * 2, GloveFrame::Whack)
+                            (x - 3, Y - 14 + step.min(9) as i32 * 2, GloveFrame::Whack)
                         }
-                        (None, Some(step)) => {
-                            (x - 2, Y - 6 - step.min(7) as i32 * 2, GloveFrame::Grab)
-                        }
+                        (None, Some(step)) => (x - 3, Y - step.min(8) as i32 * 2, GloveFrame::Grab),
                         (Some(_), Some(_)) => {
                             unreachable!("Whacking _and_ grabbing!? In _this_ economy??")
                         }
@@ -309,15 +305,13 @@ pub fn game_round(
                 }
                 1 => {
                     let x = 112 + (pos_1_x + 1) as i32 * Table::HOLE_STRIDE_X as i32;
-                    const Y: i32 = 84 + 2 * Table::HOLE_STRIDE_Y as i32 - 6;
+                    const Y: i32 = 84 + 2 * Table::HOLE_STRIDE_Y as i32 - 7;
                     let (x, y, frame) = match (whacking, grabbing) {
-                        (None, None) => (x, Y, GloveFrame::Idle),
+                        (None, None) => (x, Y - 4, GloveFrame::Idle),
                         (Some(step), None) => {
-                            (x - 2, Y - 10 + step.min(7) as i32 * 2, GloveFrame::Whack)
+                            (x - 3, Y - 14 + step.min(9) as i32 * 2, GloveFrame::Whack)
                         }
-                        (None, Some(step)) => {
-                            (x - 2, Y - 6 - step.min(7) as i32 * 2, GloveFrame::Grab)
-                        }
+                        (None, Some(step)) => (x - 3, Y - step.min(8) as i32 * 2, GloveFrame::Grab),
                         (Some(_), Some(_)) => {
                             unreachable!("Whacking _and_ grabbing!? In _this_ economy??")
                         }
@@ -357,7 +351,7 @@ pub fn game_round(
 
             if let Some(f) = &mut whacking {
                 *f += 1;
-                if *f == 5 {
+                if *f == 6 {
                     // process the hit
                     let hole = table.hole_at_mut(pos_1_x, pos_1_y);
                     match hole {
@@ -369,6 +363,9 @@ pub fn game_round(
                                 update_score(&mut stats.score, 2);
                                 stats.whacked_1 += 1;
                                 play_click_2(); // TODO play proper sound
+
+                                // reduce recoil time by bumping frame
+                                *f += 3;
 
                                 *hole = HoleStatus::Empty;
                             } else {
@@ -391,7 +388,7 @@ pub fn game_round(
                     }
                 }
                 // reset after a few more frames for recoil
-                if *f >= 14 {
+                if *f >= 16 {
                     whacking = None;
                 }
             } else if let Some(f) = &mut grabbing {
@@ -408,6 +405,9 @@ pub fn game_round(
                                 update_score(&mut stats.score, 2);
                                 stats.grabbed_2 += 1;
                                 play_click_2(); // TODO play proper sound
+
+                                // reduce recoil time by bumping frame
+                                *f += 3;
 
                                 *hole = HoleStatus::Empty;
                             } else {
@@ -430,7 +430,7 @@ pub fn game_round(
                     }
                 }
                 // reset after a few more frames for recoil
-                if *f >= 14 {
+                if *f >= 16 {
                     grabbing = None;
                 }
             }
