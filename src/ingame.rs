@@ -13,8 +13,8 @@ use crate::{
     audio::{play_click_1, play_click_2},
     gameplay::{CreatureIndex, Difficulty, HoleIndex, HoleStatus, RoundOptions, RoundState, Table},
     gfx::{
-        COLOR_BEIGE, COLOR_BLACK, COLOR_HIGHLIGHT, COLOR_WHITE, CreatureSprite, GloveFrame,
-        HoleSprite, ImageAsset, background::Background, draw_glove, fade_in, init_palette,
+        COLOR_BLACK, COLOR_HIGHLIGHT, COLOR_WHITE, CreatureSprite, GloveFrame, HoleSprite,
+        ImageAsset, StatsBoard, background::Background, draw_glove, fade_in, init_palette,
         set_background_palette, set_creature_palette,
     },
     input::{self, Key},
@@ -41,6 +41,17 @@ pub struct Stats {
     grabbed_2: u16,
     grabbed_miss: u16,
     grabbed_distract: u16,
+    /// total creatures to whack that appeared
+    total_creatures_whack: u16,
+    /// total creatures to grab that appeared
+    total_creatures_grab: u16,
+}
+
+impl Stats {
+    #[inline]
+    pub fn mistakes(&self) -> u16 {
+        self.whacked_2 + self.grabbed_1 + self.whacked_distract + self.grabbed_distract
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -69,6 +80,8 @@ pub fn game_round(
 
     // load all the necessary assets
     let glove = ImageAsset::load_glove();
+
+    let mut board = StatsBoard::new();
 
     assets.adlib_player.set_music(crate::audio::Playing::InGame);
     assets.background = match round.options.difficulty {
@@ -326,6 +339,16 @@ pub fn game_round(
 
                         // update the table accordingly
                         table.put(hole, creature);
+
+                        match creature {
+                            CreatureIndex::Whack => {
+                                stats.total_creatures_whack += 1;
+                            }
+                            CreatureIndex::Grab => {
+                                stats.total_creatures_grab += 1;
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }
@@ -368,7 +391,7 @@ pub fn game_round(
                     }
                 }
                 // reset after a few more frames for recoil
-                if *f >= 10 {
+                if *f >= 14 {
                     whacking = None;
                 }
             } else if let Some(f) = &mut grabbing {
@@ -407,7 +430,7 @@ pub fn game_round(
                     }
                 }
                 // reset after a few more frames for recoil
-                if *f >= 12 {
+                if *f >= 14 {
                     grabbing = None;
                 }
             }
@@ -442,12 +465,13 @@ pub fn game_round(
                 .draw_text(82, 92, "Time's Up!", COLOR_HIGHLIGHT);
         } else if ticks == RoundState::ROUND_LENGTH + 80 {
             assets.background.draw_all();
-            // show the stats a small bit after the round ends
-            draw_stats(&assets, &stats, &round.options, ticks);
+            // build and show the stats board a small bit after the round ends
+            render_stats(&mut board, &assets, &stats, &round.options);
+            draw_stats(&board, &assets, &stats, &round.options, ticks);
             phase = GamePhase::Stats;
         } else if ticks > RoundState::ROUND_LENGTH + 80 {
-            // keep drawing the stats
-            draw_stats(&assets, &stats, &round.options, ticks);
+            // keep drawing the stats board
+            draw_stats(&board, &assets, &stats, &round.options, ticks);
         }
 
         // process music
@@ -491,61 +515,74 @@ pub fn game_round(
     }
 }
 
-fn draw_stats(assets: &Assets, stats: &Stats, round_options: &RoundOptions, ticks: u16) {
-    const MARGIN_X: i32 = 60;
-    const MARGIN_Y: i32 = 44;
-    const CORNER_1_X: i32 = MARGIN_X;
-    const CORNER_1_Y: i32 = MARGIN_Y;
-    const CORNER_2_X: i32 = 320 - MARGIN_X;
-    const CORNER_2_Y: i32 = 200 - MARGIN_Y;
-    const W: u32 = 320 - MARGIN_X as u32 - MARGIN_X as u32;
-    const H: u32 = 200 - MARGIN_Y as u32 - MARGIN_Y as u32;
-    let c1 = COLOR_BLACK;
-    let c2 = COLOR_BEIGE;
-    // draw a rectangle with an outline
-    unsafe {
-        dos_x::vga::draw_hline(CORNER_1_X, CORNER_1_Y, W, c1);
-        dos_x::vga::draw_vline(CORNER_1_X, CORNER_1_Y + 1, H, c1);
-        dos_x::vga::draw_vline(CORNER_2_X, CORNER_1_Y, H, c1);
-        dos_x::vga::draw_hline(CORNER_1_X + 1, CORNER_1_Y + 1, W - 1, COLOR_WHITE);
-        dos_x::vga::draw_vline(CORNER_1_X + 1, CORNER_1_Y + 1, H - 1, COLOR_WHITE);
-        dos_x::vga::draw_rect(CORNER_1_X + 2, CORNER_1_Y + 2, W - 2, H - 2, c2);
-        dos_x::vga::draw_hline(CORNER_1_X, CORNER_2_Y, W + 1, c1);
-    }
+fn render_stats(
+    board: &mut StatsBoard,
+    assets: &Assets,
+    stats: &Stats,
+    round_options: &RoundOptions,
+) {
+    board.init();
 
     // draw the stats
-    assets.big_font.draw_text(74, 50, "Your Stats", COLOR_BLACK);
-
-    assets.small_font.draw_text(
-        68,
-        80,
-        &format!("Whacked {}: {}", round_options.whack, stats.whacked_1),
-        COLOR_BLACK,
-    );
-    assets.small_font.draw_text(
-        68,
-        94,
-        &format!("Grabbed {}: {}", round_options.grab, stats.grabbed_2),
-        COLOR_BLACK,
-    );
-
-    let mistakes =
-        stats.whacked_2 + stats.grabbed_1 + stats.whacked_distract + stats.grabbed_distract;
     assets
-        .small_font
-        .draw_text(68, 108, &format!("Mistakes: {}", mistakes), COLOR_BLACK);
+        .big_font
+        .render_text(board, 22, 8, "Your Stats", COLOR_BLACK);
 
-    assets.small_font.draw_text(
-        68,
-        136,
+    let ty = 40;
+    let whacked_percent = stats.whacked_1 * 100 / stats.total_creatures_whack;
+    assets.small_font.render_text(
+        board,
+        10,
+        ty,
+        &format!(
+            "Whacked {}: {} ({}%)",
+            round_options.whack, stats.whacked_1, whacked_percent
+        ),
+        COLOR_BLACK,
+    );
+    let grabbed_percent = stats.grabbed_2 * 100 / stats.total_creatures_grab;
+    assets.small_font.render_text(
+        board,
+        10,
+        ty + 14,
+        &format!(
+            "Grabbed {}: {} ({}%)",
+            round_options.grab, stats.grabbed_2, grabbed_percent
+        ),
+        COLOR_BLACK,
+    );
+
+    let mistakes = stats.mistakes();
+    assets.small_font.render_text(
+        board,
+        10,
+        ty + 14 * 2,
+        &format!("Mistakes: {}", mistakes),
+        COLOR_BLACK,
+    );
+
+    assets.small_font.render_text(
+        board,
+        10,
+        ty + 14 * 2 + 20,
         &format!("Total score: {}", stats.score),
         COLOR_BLACK,
     );
+}
+
+fn draw_stats(
+    board: &StatsBoard,
+    assets: &Assets,
+    stats: &Stats,
+    round_options: &RoundOptions,
+    ticks: u16,
+) {
+    board.draw();
 
     let weak_score = round_options.num_creatures / 2;
-    let good_score = round_options.num_creatures * 16 / 11;
+    let good_score = round_options.num_creatures * 5 / 3;
 
-    let msg = if stats.score == 0 && mistakes > 0 {
+    let msg = if stats.score == 0 && stats.mistakes() > 0 {
         Some("Did you understand your assignment?")
     } else if stats.score < weak_score {
         match round_options.difficulty {
@@ -570,6 +607,6 @@ fn draw_stats(assets: &Assets, stats: &Stats, round_options: &RoundOptions, tick
         } else {
             COLOR_BLACK
         };
-        assets.small_font.draw_text(center_x, 180, &msg, c);
+        assets.small_font.draw_text(center_x, 175, &msg, c);
     }
 }
