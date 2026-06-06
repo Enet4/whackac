@@ -1,13 +1,10 @@
 use crate::{
     gameplay::CreatureIndex,
-    gfx::{COLOR_HIGHLIGHT, CreatureSprite, background::Background, set_background_palette},
+    gfx::{CreatureSprite, background::Background, set_background_palette},
     input::{self, Key},
 };
 use alloc::format;
-use dos_x::{
-    key,
-    vga::{Palette, vsync},
-};
+use dos_x::vga::vsync;
 use tinyrand::RandRange;
 
 use crate::{
@@ -108,7 +105,7 @@ pub fn menu(assets: &mut Assets, rng: &mut impl RandRange<u16>) -> MenuOutcome {
         }
 
         // Enter
-        if input::is_pressed(Key::Select) {
+        if input::is_select_pressed() {
             play_click_2();
             match choice {
                 0 => {
@@ -242,7 +239,7 @@ fn submenu_new_game(
             play_click_1();
         }
 
-        if input::is_pressed(Key::Select) {
+        if input::is_select_pressed() {
             play_click_2();
             match choice {
                 0 => return NewGameOutcome::Easy,
@@ -414,7 +411,7 @@ fn submenu_present(assets: &mut Assets, round: &RoundOptions) {
 
         assets.adlib_player.process();
 
-        if input::is_pressed(Key::Select) {
+        if input::is_select_pressed() {
             return;
         }
 

@@ -114,6 +114,11 @@ fn process_keys() {
     }
 }
 
+/// Return whether any of the selection keys were pressed
+pub fn is_select_pressed() -> bool {
+    is_pressed(Key::Select) || is_pressed(Key::Whack1) || is_pressed(Key::Whack2)
+}
+
 /// return whether the key has just been pressed
 pub fn is_pressed(key: Key) -> bool {
     unsafe { KEY_STATE[key as usize] && !KEY_STATE_PREVIOUS[key as usize] }

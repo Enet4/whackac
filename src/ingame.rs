@@ -463,7 +463,7 @@ pub fn game_round(
             return InGameOutcome::Exit;
         }
         if phase == GamePhase::Stats
-            && (input::is_pressed(Key::Confirm) || input::is_pressed(Key::Select))
+            && (input::is_pressed(Key::Confirm) || input::is_select_pressed())
         {
             return InGameOutcome::GameOver(stats);
         }
