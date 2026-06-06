@@ -69,6 +69,8 @@ pub fn menu(assets: &mut Assets, rng: &mut impl RandRange<u16>) -> MenuOutcome {
             .draw_text(x as i32, base_y as i32 + i as i32 * 18, opt, COLOR_BLACK);
     }
 
+    input::flip_keystate();
+
     loop {
         unsafe {
             vsync();
@@ -129,6 +131,7 @@ pub fn menu(assets: &mut Assets, rng: &mut impl RandRange<u16>) -> MenuOutcome {
                                     COLOR_BLACK,
                                 );
                             }
+                            input::flip_keystate();
                             continue;
                         }
                         NewGameOutcome::Easy => {

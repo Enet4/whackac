@@ -189,6 +189,7 @@ fn run(mut rng: impl RandRange<u16>) {
             GameState::HowToPlay => {
                 how_to_play(&mut assets, &mut rng);
                 state = GameState::MainMenu;
+                input::flip_keystate();
             }
             GameState::InGame(round) => {
                 let outcome = game_round(&mut assets, &mut rng, round.clone());
