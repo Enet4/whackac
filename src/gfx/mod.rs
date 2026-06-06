@@ -39,6 +39,60 @@ pub struct CreatureAssets {
     pub arms_image: ImageAsset,
 }
 
+/// Representation of a video buffer
+pub trait Buffer {
+    /// read-only access to the buffer
+    fn data(&self) -> &[u8];
+    /// read-write access to the buffer
+    fn data_mut(&mut self) -> &mut [u8];
+
+    /// get the width of the buffer
+    fn width(&self) -> u16;
+
+    /// get the height of the buffer
+    fn height(&self) -> u16;
+
+    /// slice a rectangle portion of the buffer
+    fn rect_mut(&mut self, pos: (u16, u16), dim: (u16, u16)) -> &mut [u8] {
+        let buf_w = self.width() as usize;
+        let buf_h = self.height() as usize;
+        let offset = pos.1 as usize * buf_w + pos.0 as usize;
+        // clamp width
+        let w = (dim.0 as usize).min(buf_w - pos.0 as usize);
+        let h = (dim.1 as usize).min(buf_h - pos.1 as usize);
+
+        &mut self.data_mut()[offset..offset + w * h]
+    }
+
+    /// get a slice of a particular row
+    fn row_mut(&mut self, y: u16) -> &mut [u8] {
+        let w = self.width() as usize;
+        let offset = y as usize * w;
+        &mut self.data_mut()[offset..offset + w]
+    }
+
+    /// paint a horizontal line in a solid color
+    fn hline(&mut self, (pos_x, pos_y): (u16, u16), length: u16, c: u8) {
+        if pos_y >= self.height() || pos_x >= self.width() {
+            return;
+        }
+        let row = self.row_mut(pos_y);
+        let x = pos_x as usize;
+        row[x..x + length as usize].fill(c);
+    }
+
+    /// paint a vertical line in a solid color
+    fn vline(&mut self, (pos_x, pos_y): (u16, u16), length: u16, c: u8) {
+        let width = self.width() as usize;
+        let mut offset = pos_y as usize * width + pos_x as usize;
+        let buf = self.data_mut();
+        for _ in 0..length {
+            buf[offset] = c;
+            offset += width;
+        }
+    }
+}
+
 /// owned image asset (always 8-bit indexed)
 pub struct ImageAsset {
     pub width: u32,
@@ -46,6 +100,24 @@ pub struct ImageAsset {
     pub pixel_data: Vec<u8>,
     pub bit_depth: BitDepth,
     pub palette: Vec<u8>,
+}
+
+impl Buffer for ImageAsset {
+    fn data(&self) -> &[u8] {
+        &self.pixel_data
+    }
+
+    fn data_mut(&mut self) -> &mut [u8] {
+        &mut self.pixel_data
+    }
+
+    fn width(&self) -> u16 {
+        self.width as u16
+    }
+
+    fn height(&self) -> u16 {
+        self.height as u16
+    }
 }
 
 impl ImageAsset {
@@ -736,10 +808,10 @@ pub fn init_palette(palette: &mut Palette) {
     palette.0[25] = 0x0e;
     palette.0[26] = 0x00;
 
-    // beige
-    palette.0[27] = 0x2b;
-    palette.0[28] = 0x2a;
-    palette.0[39] = 0x26;
+    // a light beige for the stats board
+    palette.0[27] = 0x39;
+    palette.0[28] = 0x38;
+    palette.0[39] = 0x24;
 
     // range 40..47 currently unused
 
@@ -782,4 +854,66 @@ pub fn set_background_palette(palette: &mut Palette, background: &Background) {
     let offset = COLOR_BACKGROUND_OFFSET as usize * 3;
     let num_samples = BACKGROUND_MAX_COLORS as usize * 3;
     palette.0[offset..offset + num_samples].copy_from_slice(&background.0.palette[0..num_samples]);
+}
+
+pub struct StatsBoard {
+    buffer: [u8; Self::WIDTH as usize * Self::HEIGHT as usize],
+}
+
+impl StatsBoard {
+    pub const WIDTH: u16 = 200;
+    pub const HEIGHT: u16 = 112;
+
+    pub const MARGIN_X: u16 = (320 - Self::WIDTH) / 2;
+    pub const MARGIN_Y: u16 = (200 - Self::HEIGHT) / 2;
+
+    pub fn new() -> Self {
+        StatsBoard {
+            buffer: [COLOR_BEIGE; Self::WIDTH as usize * Self::HEIGHT as usize],
+        }
+    }
+
+    pub fn init(&mut self) {
+        // draw a rectangle with an outline
+        self.buffer.fill(COLOR_BEIGE);
+        let c1 = COLOR_BLACK;
+        let c2 = COLOR_WHITE;
+
+        self.hline((0, 0), Self::WIDTH, c1);
+        self.vline((0, 1), Self::HEIGHT - 2, c1);
+        self.vline((Self::WIDTH - 1, 1), Self::HEIGHT - 2, c1);
+        self.hline((0, Self::HEIGHT - 1), Self::WIDTH, c1);
+        self.hline((1, 0), Self::WIDTH - 2, c2);
+        self.vline((1, 1), Self::HEIGHT - 2, c2);
+    }
+
+    /// Draw at the center of the screen
+    pub fn draw(&self) {
+        unsafe {
+            dos_x::vga::blit_rect(
+                &self.buffer,
+                (Self::WIDTH as u32, Self::HEIGHT as u32),
+                (0, 0, Self::WIDTH as u32, Self::HEIGHT as u32),
+                (Self::MARGIN_X as i32, Self::MARGIN_Y as i32),
+            );
+        }
+    }
+}
+
+impl Buffer for StatsBoard {
+    fn data(&self) -> &[u8] {
+        &self.buffer
+    }
+
+    fn data_mut(&mut self) -> &mut [u8] {
+        &mut self.buffer
+    }
+
+    fn width(&self) -> u16 {
+        Self::WIDTH
+    }
+
+    fn height(&self) -> u16 {
+        Self::HEIGHT
+    }
 }

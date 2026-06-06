@@ -2,6 +2,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use dos_x::vga;
 
+use crate::gfx::Buffer;
+
 // embed bitmap font images into the binary
 static BIGFONT_PNG: &[u8] = include_bytes!("../../resources/nullptr.png");
 static SMALLFONT_PNG: &[u8] = include_bytes!("../../resources/charmap-cellphone_white.png");
@@ -70,6 +72,7 @@ impl BitmapFont {
         (i * self.char_stride.0 as u32, j * self.char_stride.1 as u32)
     }
 
+    /// Draw text directly to the VGA display
     pub fn draw_text(&self, x: i32, y: i32, text: impl AsRef<str>, color: u8) {
         let img_width = self.img_width as u32;
         let cw = self.char_size.0 as u32;
@@ -101,6 +104,46 @@ impl BitmapFont {
                 }
                 // blit character
                 dos_x::vga::blit_rect(&char_buffer, (cw, ch), (0, 0, cw, ch), target);
+            }
+        }
+    }
+
+    /// Draw text to a buffer
+    pub fn render_text(
+        &self,
+        to: &mut impl Buffer,
+        x: i32,
+        y: i32,
+        text: impl AsRef<str>,
+        color: u8,
+    ) {
+        let img_width = self.img_width as u32;
+        let cw = self.char_size.0 as u32;
+        let ch = self.char_size.1 as u32;
+        let buffer_width = to.width() as usize;
+        let buffer = to.data_mut();
+
+        let text = text.as_ref();
+        for (i, c) in text.bytes().enumerate() {
+            let (char_x, char_y) = self.map_char_to_position(c);
+            let (target_x, target_y) = (
+                x + i as i32 * (self.char_size.0 as i32 + Self::H_SPACING as i32),
+                y,
+            );
+            let base_offset = target_y as usize * buffer_width + target_x as usize;
+
+            // copy character pixel data into buffer
+            // if non-zero
+            for row in 0..ch {
+                let src_offset = ((char_y + row) * img_width + char_x) as usize;
+                let dst_offset = base_offset as usize + (row as usize * buffer_width);
+                for col in 0..cw {
+                    let pixel = self.pixeldata[src_offset + col as usize];
+                    if pixel == 0 {
+                        continue;
+                    }
+                    buffer[dst_offset + col as usize] = color;
+                }
             }
         }
     }
