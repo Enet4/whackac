@@ -384,7 +384,7 @@ pub fn load_player() -> AdlibPlayer {
     // patch the music a bit
     if let Some(BgmSet { menu, game, .. }) = &mut player.vgm {
         // add a small waiting time at the end to avoid abrupt cut-off in the loop
-        menu.opl_commands.push(OplCommand::Wait { samples: 2210 });
+        menu.opl_commands.push(OplCommand::Wait { samples: 3440 });
         game.opl_commands.push(OplCommand::Wait { samples: 4380 });
     }
 
