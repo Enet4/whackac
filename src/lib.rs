@@ -25,7 +25,7 @@ use dos_x::vga::vsync;
 use dos_x::{djgpp::stdlib::exit, println};
 use tinyrand::{RandRange, Seeded};
 
-use crate::audio::{adlib_notes_off, load_player, music_off};
+use crate::audio::{adlib_notes_off, enable_pc_speaker, load_player, music_off};
 use crate::create::{CreateCreatureOutcome, create_a_creature_game};
 use crate::creature::CreatureParams;
 use crate::gameplay::RoundOptions;
@@ -131,6 +131,8 @@ fn run(mut rng: impl RandRange<u16>) {
         0 => {
             println!("No Adlib sound card detected, music disabled");
             music_off();
+            // but we can enable PC speaker sound
+            enable_pc_speaker();
         }
         _ => {
             println!("Adlib sound card detected");

@@ -12,6 +12,8 @@ use opbinary::vgm::OplCommand;
 static mut NO_SOUND: bool = false;
 static mut NO_MUSIC: bool = false;
 
+static mut PC_SPEAKER_SOUND: bool = false;
+
 static MUSIC_VGM_MENU: &[u8] = include_bytes!("../resources/createac.vgm");
 static MUSIC_VGM_GAME: &[u8] = include_bytes!("../resources/whackac.vgm");
 static MUSIC_VGM_OVER: &[u8] = include_bytes!("../resources/gameover.vgm");
@@ -33,14 +35,29 @@ pub fn music_off() {
     }
 }
 
+// enable PC speaker audio (rather than Adlib based sound effects)
+pub fn enable_pc_speaker() {
+    unsafe {
+        PC_SPEAKER_SOUND = true;
+    }
+}
+
 /// Play a very short click sound
 pub fn play_click_1() {
-    play_click_impl(1800, 2);
+    if unsafe { PC_SPEAKER_SOUND } {
+        play_click_impl(1800, 2);
+    } else {
+        play_adlib_sound_1();
+    }
 }
 
 /// Play a click sound
 pub fn play_click_2() {
-    play_click_impl(1500, 4);
+    if unsafe { PC_SPEAKER_SOUND } {
+        play_click_impl(1500, 4);
+    } else {
+        play_adlib_sound_2();
+    }
 }
 
 #[inline]
@@ -53,7 +70,7 @@ fn play_click_impl(countdown: u16, duration_ms: u32) {
     unsafe {
         pc_speaker_on();
 
-        play_note(countdown);
+        play_pc_speaker_note(countdown);
         delay(duration_ms);
 
         // turn off
@@ -62,7 +79,7 @@ fn play_click_impl(countdown: u16, duration_ms: u32) {
 }
 
 #[inline]
-unsafe fn play_note(countdown: u16) {
+unsafe fn play_pc_speaker_note(countdown: u16) {
     unsafe {
         outportb(0x42, (countdown & 0xff) as u8);
         outportb(0x42, (countdown >> 8) as u8);
@@ -83,6 +100,106 @@ unsafe fn pc_speaker_off() {
     unsafe {
         let inb = inportb(0x61);
         outportb(0x61, inb & 0xfc);
+    }
+}
+
+pub fn play_adlib_sound_1() {
+    if unsafe { NO_MUSIC } {
+        return;
+    }
+
+    // set note off to cancel any previous note
+    sfx_off();
+
+    // set the instrument (channel 7)
+    let op1_offset = 0x10;
+    let op2_offset = op1_offset + 3;
+
+    unsafe {
+        // modulator multiple to 1
+        adlib::write_command(0x20 + op1_offset, 0x01);
+        // modulator level
+        adlib::write_command(0x40 + op1_offset, 0x17);
+        // modulator attack / decay
+        adlib::write_command(0x60 + op1_offset, 0xec);
+        // modulator sustain / release
+        adlib::write_command(0x80 + op1_offset, 0x77);
+        // more bitflags (AM/FM)
+        adlib::write_command(0xc0 + op1_offset, 0b0011_0000);
+        // modulator waveform (3 = sine)
+        adlib::write_command(0xe0 + op1_offset, 0x00);
+        // set carrier multiple to 1
+        adlib::write_command(0x20 + op2_offset, 0x01);
+        // carrier level maximum volume (about 47db)
+        adlib::write_command(0x40 + op2_offset, 0x00);
+        // carrier attack / decay
+        adlib::write_command(0x60 + op2_offset, 0xf8);
+        // carrier sustain / release
+        adlib::write_command(0x80 + op2_offset, 0x77);
+        // carrier waveform
+        adlib::write_command(0xe0 + op2_offset, 0x02);
+    }
+
+    // play the intended note
+    sfx_note_on(0x241, 4);
+}
+
+pub fn play_adlib_sound_2() {
+    if unsafe { NO_MUSIC } {
+        return;
+    }
+
+    // set note off to cancel any previous note
+    sfx_off();
+
+    // set the instrument (channel 7)
+    let op1_offset = 0x10;
+    let op2_offset = op1_offset + 3;
+
+    unsafe {
+        // modulator multiple to 1
+        adlib::write_command(0x20 + op1_offset, 0x01);
+        // modulator level
+        adlib::write_command(0x40 + op1_offset, 0x17);
+        // modulator attack / decay
+        adlib::write_command(0x60 + op1_offset, 0xec);
+        // modulator sustain / release
+        adlib::write_command(0x80 + op1_offset, 0x77);
+        // more bitflags (AM/FM)
+        adlib::write_command(0xc0 + op1_offset, 0b0011_0000);
+        // modulator waveform (3 = sine)
+        adlib::write_command(0xe0 + op1_offset, 0x00);
+        // set carrier multiple to 1
+        adlib::write_command(0x20 + op2_offset, 0x01);
+        // carrier level maximum volume (about 47db)
+        adlib::write_command(0x40 + op2_offset, 0x00);
+        // carrier attack / decay
+        adlib::write_command(0x60 + op2_offset, 0xf7);
+        // carrier sustain / release
+        adlib::write_command(0x80 + op2_offset, 0x77);
+        // carrier waveform
+        adlib::write_command(0xe0 + op2_offset, 0x02);
+    }
+
+    // play the intended note
+    sfx_note_on(0x202, 5);
+}
+
+fn sfx_off() {
+    // voice off
+    unsafe {
+        adlib::write_command(0xb6, 0);
+    }
+}
+
+/// play a single note on channel 7
+fn sfx_note_on(freq: u16, octave: u8) {
+    unsafe {
+        let [freq_lo, freq_hi] = freq.to_le_bytes();
+        // set voice frequency LSB
+        adlib::write_command(0xa6, freq_lo);
+        // turn voice on, set octave, and freq MSB
+        adlib::write_command(0xb6, (1 << 5) | (octave << 2) | freq_hi);
     }
 }
 
