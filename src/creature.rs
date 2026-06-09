@@ -41,7 +41,7 @@ impl CreatureParams {
 
     /// Change exactly one of the characteristics of the creature
     pub fn mutate_one(&mut self, rng: &mut impl RandRange<u16>) {
-        let characteristic = rng.next_range(0..5);
+        let characteristic = rng.next_range(0..4);
         match characteristic {
             // shape
             0 => {
@@ -85,7 +85,7 @@ impl CreatureParams {
                 // apply also to the legs
                 self.legs = self.arms;
             }
-            _ => unreachable!(),
+            n => unreachable!("random range in 0..4 returned {n}"),
         }
     }
 
